@@ -8,14 +8,6 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
-    depends_on:
-      - mongo
-  mongo:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
 
 volumes:
   mongodb_data:
