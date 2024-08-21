@@ -23,19 +23,27 @@ const app = new App({
   receiver: expressReceiver
 });
 
-const mongoClient = new MongoClient(process.env.MONGODB_URI || 'mongodb://mongo:27017/deep_work_tracker');
+const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let db;
 
 async function connectToDatabase() {
   try {
+    // Log the MongoDB URI to verify it's being set correctly
+    console.log('MongoDB URI:', process.env.MONGODB_URI);
+
     await mongoClient.connect();
     console.log('Connected to MongoDB');
-    db = mongoClient.db('deep_work_tracker');
+    
+    // Log the actual database name being used
+    db = mongoClient.db('deep_work_tracker'); // You could make this dynamic if needed
+    console.log('Using Database:', db.databaseName);
+
   } catch (error) {
     console.error('Failed to connect to MongoDB', error);
     process.exit(1);
   }
 }
+
 
 async function storeSession(session) {
   const sessions = db.collection('sessions');
