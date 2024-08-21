@@ -4,7 +4,7 @@
 1. [Introduction](#introduction)
 2. [Prerequisites](#prerequisites)
 3. [Local Setup](#local-setup)
-4. [Deployment to EC2](#deployment-to-ec2)
+4. [Deployment](#deployment)
 5. [Usage](#usage)
 6. [Troubleshooting](#troubleshooting)
 7. [Contributing](#contributing)
@@ -20,6 +20,7 @@ The Deep Work Tracker is a Slack bot designed to help users track their deep wor
 - Docker and Docker Compose
 - A Slack workspace with permission to add apps
 - An AWS account (for EC2 deployment)
+- MongoDB Atlas account (for cloud database)
 
 ## Local Setup
 
@@ -33,38 +34,45 @@ The Deep Work Tracker is a Slack bot designed to help users track their deep wor
    ```
    SLACK_SIGNING_SECRET=your_slack_signing_secret
    SLACK_BOT_TOKEN=your_slack_bot_token
-   MONGODB_URI=mongodb://mongo:27017/deep_work_tracker
+   MONGODB_URI=your_mongodb_atlas_connection_string
    ```
 
-3. **Build and run the Docker containers:**
+3. **Install dependencies:**
+   ```
+   npm install
+   ```
+
+4. **Build and run the Docker containers:**
    ```
    docker-compose up --build
    ```
 
-4. **Create a Slack App:**
+5. **Create a Slack App:**
    - Go to https://api.slack.com/apps and create a new app
    - Under "Basic Information", note your Signing Secret
    - Under "OAuth & Permissions", add the `commands` scope and install the app to your workspace
    - Note the Bot User OAuth Token
 
-5. **Update your `.env` file with the Slack credentials**
+6. **Update your `.env` file with the Slack credentials**
 
-6. **Set up slash command:**
+7. **Set up slash command:**
    - In your Slack App settings, go to "Slash Commands"
    - Create a new command called `/deepwork`
    - Set the Request URL to `http://your-ngrok-url/slack/events`
 
-7. **Set up event subscriptions:**
+8. **Set up event subscriptions:**
    - In your Slack App settings, go to "Event Subscriptions"
    - Enable events and set the Request URL to `http://your-ngrok-url/slack/events`
 
-8. **Use ngrok for local testing:**
+9. **Use ngrok for local testing:**
    ```
    ngrok http 3000
    ```
    Update your Slack App's Request URLs with the ngrok URL
 
-## Deployment to EC2
+## Deployment
+
+This application is designed to be deployed on an AWS EC2 instance and uses MongoDB Atlas for data storage.
 
 1. **Launch an EC2 instance:**
    - Use Amazon Linux 2 AMI
@@ -102,7 +110,7 @@ The Deep Work Tracker is a Slack bot designed to help users track their deep wor
    ```
    nano .env
    ```
-   Add your environment variables as in the local setup.
+   Add your environment variables, including the MongoDB Atlas connection string.
 
 7. **Build and run your Docker containers:**
    ```
@@ -160,9 +168,9 @@ The Deep Work Tracker is a Slack bot designed to help users track their deep wor
 
 ## Troubleshooting
 
-- **Logs not persisting:** Check Docker volume configuration and ensure MongoDB is correctly saving data
+- **MongoDB connection issues:** Check your MongoDB Atlas connection string and ensure it's correctly set in the `.env` file
 - **Slack commands not working:** Verify Slack App configuration and environment variables
-- **Connection issues:** Check security group settings and ensure ports are open
+- **Connection issues:** Check EC2 security group settings and ensure ports are open
 
 To view logs:
 ```
