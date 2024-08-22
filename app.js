@@ -1,26 +1,17 @@
 const { App, ExpressReceiver } = require('@slack/bolt');
 const { MongoClient } = require('mongodb');
-const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
-const expressReceiver = new ExpressReceiver({
+const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
-  processBeforeResponse: true,
-  endpoints: '/slack/events',
-});
-
-// Add explicit URL verification handler
-expressReceiver.router.post('/slack/events', (req, res) => {
-  if (req.body.type === 'url_verification') {
-    res.send(req.body.challenge);
-  }
+  processBeforeResponse: true
 });
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
-  receiver: expressReceiver
+  receiver: receiver
 });
 
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
@@ -28,35 +19,26 @@ let db;
 
 async function connectToDatabase() {
   try {
-    // Log the MongoDB URI to verify it's being set correctly
     console.log('MongoDB URI:', process.env.MONGODB_URI);
-
     await mongoClient.connect();
     console.log('Connected to MongoDB');
-    
-    // Log the actual database name being used
-    db = mongoClient.db('deep_work_tracker'); // You could make this dynamic if needed
+    db = mongoClient.db('deep_work_tracker');
     console.log('Using Database:', db.databaseName);
-
   } catch (error) {
     console.error('Failed to connect to MongoDB', error);
     process.exit(1);
   }
 }
 
-
 async function storeSession(session) {
   const sessions = db.collection('sessions');
-  
   if (session._id) {
-    // If _id exists, it's an update to an existing session
     await sessions.updateOne(
       { _id: session._id },
       { $set: session },
       { upsert: true }
     );
   } else {
-    // If no _id, it's a new session
     await sessions.insertOne(session);
   }
 }
@@ -79,7 +61,6 @@ app.command('/deepwork', async ({ command, ack, say, client }) => {
   const activeSession = userSessions.find(session => !session.endTime);
 
   if (activeSession) {
-    // End the session
     const endTime = new Date();
     const duration = Math.round((endTime - activeSession.startTime) / 60000);
 
@@ -91,7 +72,6 @@ app.command('/deepwork', async ({ command, ack, say, client }) => {
 
     await say(`<@${userId}> has ended their deep work session (duration: ${duration} minutes)`);
   } else {
-    // Start a new session
     const userInfo = await client.users.info({ user: userId });
     const newSession = {
       userId: userId,
@@ -106,7 +86,7 @@ app.command('/deepwork', async ({ command, ack, say, client }) => {
   }
 });
 
-expressReceiver.router.get('/export-sessions', async (req, res) => {
+receiver.router.get('/export-sessions', async (req, res) => {
   try {
     const allSessions = await getAllSessions();
     res.json(allSessions);
