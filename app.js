@@ -56,33 +56,48 @@ async function getAllSessions() {
 app.command('/deepwork', async ({ command, ack, say, client }) => {
   await ack();
   const userId = command.user_id;
+  const text = command.text.trim();
 
   const userSessions = await getSessionsByUser(userId);
   const activeSession = userSessions.find(session => !session.endTime);
 
   if (activeSession) {
+    // Ending a session
+    if (!text) {
+      await say(`<@${userId}> Please provide a reflection when ending your deep work session. Use the format: /deepwork your reflection here`);
+      return;
+    }
+
     const endTime = new Date();
     const duration = Math.round((endTime - activeSession.startTime) / 60000);
 
     await storeSession({
       ...activeSession,
       endTime: endTime,
-      duration: duration
+      duration: duration,
+      reflection: text
     });
 
-    await say(`<@${userId}> has ended their deep work session (duration: ${duration} minutes)`);
+    await say(`<@${userId}> has ended their deep work session (duration: ${duration} minutes)\nReflection: ${text}`);
   } else {
+    // Starting a session
+    if (!text) {
+      await say(`<@${userId}> Please provide a description when starting your deep work session. Use the format: /deepwork your description here`);
+      return;
+    }
+
     const userInfo = await client.users.info({ user: userId });
     const newSession = {
       userId: userId,
       name: userInfo.user.real_name,
       email: userInfo.user.profile.email,
       startTime: new Date(),
-      channelId: command.channel_id
+      channelId: command.channel_id,
+      description: text
     };
 
     await storeSession(newSession);
-    await say(`<@${userId}> has started a deep work session`);
+    await say(`<@${userId}> has started a deep work session\nDescription: ${text}`);
   }
 });
 
