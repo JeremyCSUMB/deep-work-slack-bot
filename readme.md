@@ -94,8 +94,171 @@ The Deep Work Tracker system consists of the following components:
 
 ## Deployment
 
-[Deployment instructions remain largely the same as in the original README. Update the EC2 instance setup if needed.]
+This section covers deploying the Deep Work Tracker Slack Bot to an AWS EC2 instance. These steps assume you have an AWS account and basic familiarity with EC2.
 
+### 1. Set up an EC2 Instance
+
+1. Log in to your AWS Management Console and navigate to EC2.
+2. Launch a new EC2 instance:
+   - Choose an Amazon Linux 2 AMI
+   - Select t2.micro instance type (or larger if needed)
+   - Configure instance details as needed
+   - Add storage (8GB is usually sufficient)
+   - Add tags if desired
+   - Configure security group:
+     - Allow SSH (port 22) from your IP
+     - Allow HTTP (port 80) and HTTPS (port 443) from anywhere
+   - Review and launch the instance
+   - Create or select an existing key pair
+
+### 2. Connect to Your EC2 Instance
+
+Use SSH to connect to your instance:
+
+```
+ssh -i /path/to/your-key-pair.pem ec2-user@your-instance-public-dns
+```
+
+### 3. Install Dependencies
+
+Update the system and install dependencies:
+
+```bash
+sudo yum update -y
+sudo yum install -y docker git
+sudo service docker start
+sudo usermod -a -G docker ec2-user
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+Log out and log back in for the group changes to take effect.
+
+### 4. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/deep-work-slack-bot.git
+cd deep-work-slack-bot
+```
+
+### 5. Set Up Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+nano .env
+```
+
+Add your environment variables:
+
+```
+SLACK_SIGNING_SECRET=your_slack_signing_secret
+SLACK_BOT_TOKEN=your_slack_bot_token
+MONGODB_URI=your_mongodb_atlas_connection_string
+DEEPWORK_TIMEOUT_MINUTES=180
+CHECK_INTERVAL_MINUTES=15
+```
+
+### 6. Build and Run the Docker Container
+
+```bash
+docker-compose up --build -d
+```
+
+### 7. Set Up Nginx as a Reverse Proxy (Optional but Recommended)
+
+Install and configure Nginx:
+
+```bash
+sudo amazon-linux-extras install nginx1
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+Create an Nginx configuration file:
+
+```bash
+sudo nano /etc/nginx/conf.d/deep-work-bot.conf
+```
+
+Add the following configuration:
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Test the configuration and restart Nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### 8. Set Up SSL with Let's Encrypt (Optional but Recommended)
+
+Install Certbot:
+
+```bash
+sudo amazon-linux-extras install epel
+sudo yum install -y certbot python2-certbot-nginx
+```
+
+Obtain and install an SSL certificate:
+
+```bash
+sudo certbot --nginx -d your-domain.com
+```
+
+Follow the prompts to complete the SSL setup.
+
+### 9. Update Slack App Configuration
+
+In your Slack App settings:
+- Update the Request URL for your slash command to `https://your-domain.com/slack/events`
+- Update the Request URL for event subscriptions to `https://your-domain.com/slack/events`
+
+### 10. Monitor the Application
+
+View logs:
+
+```bash
+docker logs deep-work-slack-bot-app-1
+```
+
+### Updating the Application
+
+To update the application with the latest changes:
+
+1. SSH into your EC2 instance
+2. Navigate to the project directory
+3. Pull the latest changes:
+   ```bash
+   git pull origin main
+   ```
+4. Rebuild and restart the Docker container:
+   ```bash
+   docker-compose up --build -d
+   ```
+
+### Troubleshooting
+
+- If the application isn't accessible, check the security group settings in EC2.
+- Ensure all environment variables are correctly set in the `.env` file.
+- Check Docker and application logs for any error messages.
+
+Remember to regularly update your EC2 instance and Docker images to ensure you have the latest security patches.
 ## Usage
 
 - In any Slack channel, use `/deepwork [description]` to start a deep work session
